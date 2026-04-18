@@ -10,6 +10,7 @@ module Dynflow
 
       def handle_request(envelope)
         match(envelope.message,
+          on(AgentEvent) { handle_agent_event(envelope, envelope.message) },
           on(Planning) { perform_planning(envelope, envelope.message) },
           on(Execution) { perform_execution(envelope, envelope.message) },
           on(Event)     { perform_event(envelope, envelope.message) },
@@ -22,6 +23,27 @@ module Dynflow
       def perform_planning(envelope, planning)
         @world.executor.plan(planning.execution_plan_id)
         respond(envelope, Accepted)
+      rescue Dynflow::Error => e
+        respond(envelope, Failed[e.message])
+      end
+
+      def handle_agent_event(envelope, agent_event)
+        agent = @world.find_agent(agent_event.agent_name)
+        unless agent && agent[:instance]
+          respond(envelope, Failed["Agent #{agent_event.agent_name} not found"])
+          return
+        end
+
+        instance = agent[:instance]
+        # TODO: send_off ?
+        instance.send(agent_event.event, agent_event.args) do |value, event_class, args|
+          event = event_class.new(*args)
+          event.run(value)
+        end
+        # TODO: handle agent.failed? == true
+        # TODO: conditional blocking?
+        instance.await
+        respond(envelope, Done)
       rescue Dynflow::Error => e
         respond(envelope, Failed[e.message])
       end

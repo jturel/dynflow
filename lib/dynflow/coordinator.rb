@@ -188,6 +188,17 @@ module Dynflow
       end
     end
 
+    class AgentLock < LockByWorld
+      def initialize(world, agent_name)
+        super(world)
+        @data[:id] = self.class.lock_id(agent_name)
+      end
+
+      def self.lock_id(agent_name)
+        "agent:#{agent_name}"
+      end
+    end
+
     class DelayedExecutorLock < LockByWorld
       def initialize(world)
         super

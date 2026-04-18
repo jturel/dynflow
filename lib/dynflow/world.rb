@@ -70,6 +70,29 @@ module Dynflow
         end
       end
       post_initialization
+      @agents = {}
+    end
+
+    def find_agent(name)
+      @agents[name]
+    end
+
+    def register_agent(name, value:)
+      if executor
+        begin
+          coordinator.acquire(Coordinator::AgentLock.new(self, name))
+        rescue Coordinator::LockError
+          logger.info "Agent #{name} already registered, skipping"
+          return
+        end
+        @agents[name] = {
+          default_value: value,
+          instance: Concurrent::Agent.new(value),
+        }
+      else
+        logger.info "Finding world for agent #{name}"
+        # TODO: implement this
+      end
     end
 
     # performs steps once the executor is ready and invalidation of previous worls is finished.
@@ -78,6 +101,7 @@ module Dynflow
     def post_initialization
       @delayed_executor ||= try_spawn(:delayed_executor, Coordinator::DelayedExecutorLock)
       @execution_plan_cleaner ||= try_spawn(:execution_plan_cleaner, Coordinator::ExecutionPlanCleanerLock)
+      # TODO: is an agent executor needed?
       update_register
       @delayed_executor.start if auto_validity_check && @delayed_executor && !@delayed_executor.started?
       self.auto_execute if @config.auto_execute
@@ -241,6 +265,11 @@ module Dynflow
 
     def event(execution_plan_id, step_id, event, done = Concurrent::Promises.resolvable_future, optional: false)
       publish_request(Dispatcher::Event[execution_plan_id, step_id, event, nil, optional], done, false)
+    end
+
+    def agent_event(agent_name, event, args, done = Concurrent::Promises.resolvable_future)
+      # Temporarily changed to wait for acceptance
+      publish_request(Dispatcher::AgentEvent[agent_name, event, args], done, true)
     end
 
     def plan_event(execution_plan_id, step_id, event, time, accepted = Concurrent::Promises.resolvable_future, optional: false)
