@@ -77,7 +77,7 @@ module Dynflow
       @agents[name]
     end
 
-    def register_agent(name, value:)
+    def register_agent(name, value:, observers: [])
       if executor
         begin
           coordinator.acquire(Coordinator::AgentLock.new(self, name))
@@ -85,9 +85,16 @@ module Dynflow
           logger.info "Agent #{name} already registered, skipping"
           return
         end
+
+        agent = Concurrent::Agent.new(value)
+        observers.each do |observer|
+          agent.add_observer(observer)
+        end
+
         @agents[name] = {
           default_value: value,
-          instance: Concurrent::Agent.new(value),
+          instance: agent,
+          observers: observers,
         }
       else
         logger.info "Finding world for agent #{name}"
@@ -268,8 +275,7 @@ module Dynflow
     end
 
     def agent_event(agent_name, event, args, done = Concurrent::Promises.resolvable_future)
-      # Temporarily changed to wait for acceptance
-      publish_request(Dispatcher::AgentEvent[agent_name, event, args], done, true)
+      publish_request(Dispatcher::AgentEvent[agent_name, event, args], done, false)
     end
 
     def plan_event(execution_plan_id, step_id, event, time, accepted = Concurrent::Promises.resolvable_future, optional: false)

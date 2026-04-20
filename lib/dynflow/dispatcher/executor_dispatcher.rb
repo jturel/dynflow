@@ -35,15 +35,17 @@ module Dynflow
         end
 
         instance = agent[:instance]
+        # Calling await on a failed instance will block indefinitely until restarted
+        respond(envelope, Failed["agent was in failed state"]) && return if instance.failed?
+
         # TODO: send_off ?
-        instance.send(agent_event.event, agent_event.args) do |value, event_class, args|
+        instance.send_off(agent_event.event, agent_event.args) do |value, event_class, args|
           event = event_class.new(*args)
           event.run(value)
         end
-        # TODO: handle agent.failed? == true
         # TODO: conditional blocking?
-        instance.await
-        respond(envelope, Done)
+        # instance.await
+        respond(envelope, Accepted)
       rescue Dynflow::Error => e
         respond(envelope, Failed[e.message])
       end
