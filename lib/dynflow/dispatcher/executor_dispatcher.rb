@@ -10,7 +10,7 @@ module Dynflow
 
       def handle_request(envelope)
         match(envelope.message,
-          on(AgentEvent) { handle_agent_event(envelope, envelope.message) },
+          on(ActorMessage) { handle_actor_message(envelope, envelope.message) },
           on(Planning) { perform_planning(envelope, envelope.message) },
           on(Execution) { perform_execution(envelope, envelope.message) },
           on(Event)     { perform_event(envelope, envelope.message) },
@@ -27,24 +27,16 @@ module Dynflow
         respond(envelope, Failed[e.message])
       end
 
-      def handle_agent_event(envelope, agent_event)
-        agent = @world.find_agent(agent_event.agent_name)
-        unless agent && agent[:instance]
-          respond(envelope, Failed["Agent #{agent_event.agent_name} not found"])
+      def handle_actor_message(envelope, actor_message)
+        actor = @world.managed_actors[actor_message.actor_name]
+
+        unless actor
+          respond(envelope, Failed["Actor #{actor_message.actor_name} not found"])
           return
         end
 
-        instance = agent[:instance]
-        # Calling await on a failed instance will block indefinitely until restarted
-        respond(envelope, Failed["agent was in failed state"]) && return if instance.failed?
+        actor.tell([actor_message.message.to_sym, *actor_message.args])
 
-        # TODO: send_off ?
-        instance.send_off(agent_event.event, agent_event.args) do |value, event_class, args|
-          event = event_class.new(*args)
-          event.run(value)
-        end
-        # TODO: conditional blocking?
-        # instance.await
         respond(envelope, Accepted)
       rescue Dynflow::Error => e
         respond(envelope, Failed[e.message])

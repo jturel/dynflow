@@ -11,9 +11,9 @@ module Dynflow
                 optional:          Algebrick::Types::Boolean
       end
 
-      AgentEvent = type do
-        fields! agent_name: String,
-                event: Object,
+      ActorMessage = type do
+        fields! actor_name: String,
+                message: String,
                 args: Array
       end
 
@@ -39,7 +39,7 @@ module Dynflow
         fields! execution_plan_id: String
       end
 
-      variants AgentEvent, Event, Execution, Ping, Status, Planning, Halt
+      variants ActorMessage, Event, Execution, Ping, Status, Planning, Halt
     end
 
     Response = Algebrick.type do

@@ -141,8 +141,8 @@ module Dynflow
              ignore_unknown = event.optional
              find_executor(event.execution_plan_id)
            end),
-          (on ~AgentEvent do |event|
-             find_agent_executor(event.agent_name)
+          (on ~ActorMessage do |event|
+             find_actor_executor(event.actor_name)
            end),
           (on ~Halt do |event|
              executor = find_executor(event.execution_plan_id)
@@ -159,7 +159,6 @@ module Dynflow
           log(Logger::DEBUG, message)
           return respond(envelope, Failed[message])
         end
-
         connector.send(envelope).value!
       rescue => e
         log(Logger::ERROR, e)
@@ -211,11 +210,11 @@ module Dynflow
         Dispatcher::UnknownWorld
       end
 
-      def find_agent_executor(agent_name)
-        agent_lock = @world.coordinator.find_locks(class: Coordinator::AgentLock.name,
-                                                   id: "agent:#{agent_name}").first
-        if agent_lock
-          agent_lock.world_id
+      def find_actor_executor(actor_name)
+        actor_lock = @world.coordinator.find_locks(class: Coordinator::ActorLock.name,
+                                                   id: "actor:#{actor_name}").first
+        if actor_lock
+          actor_lock.world_id
         else
           Dispatcher::UnknownWorld
         end
@@ -257,7 +256,7 @@ module Dynflow
             (on Execution.(execution_plan_id: ~any) do |uuid|
                @world.persistence.load_execution_plan(uuid)
              end),
-            (on AgentEvent | Event | Ping | Halt do
+            (on ActorMessage | Event | Ping | Halt do
                true
              end)
           @tracked_requests.delete(id).success! resolve_to

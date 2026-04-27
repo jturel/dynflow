@@ -3,15 +3,20 @@
 
 require_relative 'example_helper'
 
-class MyEvent
-  def initialize(value)
-    @value = value
+class ExampleActor < Concurrent::Actor::Context
+  def initialize
+    @value = 0
   end
 
-  def run(current_value)
-    new_value = current_value + @value
-    # STDOUT.puts "Computed new value of #{new_value}"
-    new_value
+  def on_message(message)
+    message, args = message
+    case message
+    when :increment
+      @value += 1
+      STDOUT.puts "Value incremented to #{@value}"
+    when :terminate
+      args.fulfill(true)
+    end
   end
 end
 
@@ -19,6 +24,7 @@ def server_world
   ExampleHelper.create_world do |config|
     config.persistence_adapter = persistence_adapter
     config.connector           = connector
+    config.managed_actors.add('example', ExampleActor)
   end
 end
 
@@ -30,7 +36,7 @@ def client_world
 end
 
 def db_path
-  File.expand_path('agent_remote_executor_db.sqlite', __dir__)
+  File.expand_path('actor_remote_executor_db.sqlite', __dir__)
 end
 
 def persistence_conn_string
@@ -58,16 +64,12 @@ if $PROGRAM_NAME == __FILE__
     MSG
 
     world = server_world
-    world.register_agent('example', value: 0)
-    world.agent_event('example', MyEvent, [1])
+    world.managed_actors['example'].tell(:increment)
     ExampleHelper.run_web_console(world)
-
-    puts "Final value: #{world.find_agent('example')[:instance].value}"
   when 'client'
     world = client_world
     100.times do |i|
-      world.agent_event('example', MyEvent, [i])
-      puts "Sent MyEvent with value #{i} to the server"
+      world.message_actor('example', 'increment', [])
     end
   else
     puts "Unknown command #{command}"

@@ -188,14 +188,14 @@ module Dynflow
       end
     end
 
-    class AgentLock < LockByWorld
-      def initialize(world, agent_name)
+    class ActorLock < LockByWorld
+      def initialize(world, actor_name)
         super(world)
-        @data[:id] = self.class.lock_id(agent_name)
+        @data[:id] = self.class.lock_id(actor_name)
       end
 
-      def self.lock_id(agent_name)
-        "agent:#{agent_name}"
+      def self.lock_id(actor_name)
+        "actor:#{actor_name}"
       end
     end
 
