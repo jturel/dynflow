@@ -32,7 +32,7 @@ module Dynflow
   Concurrent::Actor::Envelope.prepend(EnvelopeBacktraceExtension)
 
   # Common parent for all the Dynflow actors defining some defaults
-  # that we preffer here.
+  # that we prefer here.
   class Actor < Concurrent::Actor::Context
     module LogWithFullBacktrace
       def log(level, message = nil, &block)

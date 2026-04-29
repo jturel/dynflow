@@ -59,8 +59,9 @@ module Dynflow
         @actors = {}
       end
 
-      def add(name, actor_class)
-        @actors[name] = actor_class
+      def add(name, options = {})
+        raise ArgumentError, "Actor #{name} is already defined" if @actors.key?(name)
+        @actors[name] = options
       end
     end
 

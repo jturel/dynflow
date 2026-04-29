@@ -211,16 +211,13 @@ module Dynflow
       end
 
       def find_actor_executor(actor_name)
-        actor_lock = @world.coordinator.find_locks(class: Coordinator::ActorLock.name,
+        actor_lock = @world.coordinator.find_locks(class: Coordinator::SingletonActorLock.name,
                                                    id: "actor:#{actor_name}").first
-        if actor_lock
-          actor_lock.world_id
-        else
-          Dispatcher::UnknownWorld
-        end
-      rescue => e
-        log(Logger::ERROR, e)
-        Dispatcher::UnknownWorld
+        return actor_lock.world_id if actor_lock
+
+        @world.logger.info "Actor lock for #{actor_name} not found, trying to find executor among managed actors"
+
+        AnyExecutor
       end
 
       def track_request(finished, request, timeout)
