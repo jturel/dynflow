@@ -211,11 +211,10 @@ module Dynflow
       end
 
       def find_actor_executor(actor_name)
+        # TODO: viable to check world config for singleton property before checking for lock?
         actor_lock = @world.coordinator.find_locks(class: Coordinator::SingletonActorLock.name,
                                                    id: "actor:#{actor_name}").first
         return actor_lock.world_id if actor_lock
-
-        @world.logger.info "Actor lock for #{actor_name} not found, trying to find executor among managed actors"
 
         AnyExecutor
       end

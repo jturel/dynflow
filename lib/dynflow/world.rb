@@ -117,7 +117,9 @@ module Dynflow
       actors.each do |name, options|
         begin
           coordinator.acquire(Coordinator::SingletonActorLock.new(self, name)) if options[:singleton]
-          @managed_actors[name] = spawn_and_wait(options[:class], "managed-actor-#{name}")
+          actor = spawn_and_wait(Dynflow::ManagedActor, "managed-actor-#{name}", options[:class])
+          actor.ask(:start).wait
+          @managed_actors[name] = actor
         rescue Coordinator::LockError
           logger.info "Actor #{name} already registered, skipping"
         end

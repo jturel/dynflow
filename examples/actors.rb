@@ -3,20 +3,14 @@
 
 require_relative 'example_helper'
 
-class ExampleActor < Concurrent::Actor::Context
+class ExampleActor
   def initialize
     @value = 0
   end
 
-  def on_message(message)
-    message, args = message
-    case message
-    when :increment
-      @value += 1
-      STDOUT.puts "Value incremented to #{@value}"
-    when :terminate
-      args.fulfill(true)
-    end
+  def increment
+    @value += 1
+    STDOUT.puts "Value incremented to #{@value}"
   end
 end
 
@@ -24,7 +18,7 @@ def server_world
   ExampleHelper.create_world do |config|
     config.persistence_adapter = persistence_adapter
     config.connector           = connector
-    config.managed_actors.add('example', ExampleActor)
+    config.managed_actors.add('example', class: ExampleActor)
   end
 end
 
